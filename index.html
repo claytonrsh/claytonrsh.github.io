@@ -105,7 +105,7 @@
                 cbd_sql.execute(qry).done(function(bins){
                     console.log('bins returned: ', bins);
                 })
-                if (tbl_name == 'ums_roadtest0917_minuteaverages') {
+                if (tbl_name == summary_tbl) {
                     var tmp_css = '#' + tbl_name + '{ polygon-fill: #F1EEF6; polygon-opacity: 0.8; line-color: #FFF; line-width: 0.5; line-opacity: 1;}',
                         tmp_css = tmp_css + '#' + tbl_name + ' [ amb_temp <= 33.5] { polygon-fill: #91003F; }',
                         tmp_css = tmp_css + '#' + tbl_name + ' [ amb_temp <= 32.03] { polygon-fill: #CE1256; }',
@@ -114,7 +114,7 @@
                         tmp_css = tmp_css + '#' + tbl_name + ' [ amb_temp <= 29.38] { polygon-fill: #C994C7; }',
                         tmp_css = tmp_css + '#' + tbl_name + ' [ amb_temp <= 28.8] { polygon-fill: #D4B9DA; }',
                         tmp_css = tmp_css + '#' + tbl_name + ' [ amb_temp <= 27.53] { polygon-fill: #F1EEF6; }';
-                } else if (tbl_name == 'ums_roadtest_0917'){
+                } else if (tbl_name == raw_tbl){
                     var tmp_css = '#' + tbl_name + '{   marker-fill-opacity: 0.8; marker-line-color: #FFF; marker-line-width: 0.5; marker-line-opacity: 0.5; marker-width: 10; marker-fill: #FFFFB2; marker-allow-overlap: true;}',
                         tmp_css = tmp_css + '#' + tbl_name + ' [ amb_temp <= 34.14] { marker-fill: #91003F; }',
                         tmp_css = tmp_css + '#' + tbl_name + ' [ amb_temp <= 32.03] { marker-fill: #CE1256; }',
