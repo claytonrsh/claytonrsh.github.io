@@ -1,11 +1,20 @@
 <html>
     <head>
         <title>UMS: Dashboard Dev</title>
+        <script src="http://www.chartjs.org/assets/Chart.js"></script>
+
         <link rel="stylesheet" href="http://libs.cartocdn.com/cartodb.js/v3/3.11/themes/css/cartodb.css" />
+        <script type="infowindow/html" id="infowindow_template"></script>
         <script src="http://libs.cartocdn.com/cartodb.js/v3/3.11/cartodb.js"></script>
+
         <style>
             html, body {width:100%; height:100%; padding: 0; margin: 0;}
-            #map { width: 100%; height:100%; background: black;}
+            #map { position: absolute; right:0px; top:0px; width: 70%; height:100%; background: black; }
+
+            #dashboard { position: absolute; left:0px; top:0px; width: 30%; height:100%; background: black; }
+
+            #temp-quarterly { position: absolute; left: 10px; top: 5px; width: 500px; height: 200px; z-index: 10; }
+
             #menu { position: absolute; top: 5px; right: 10px; width: 400px; height:60px; background: transparent; z-index:10;}
             #menu a {
                 margin: 15px 10px 0 0;
@@ -30,7 +39,7 @@
         </style>
 
         <script>
-            // initialize some variables
+            // global variables
             var map;
             var cbd_sql = new cartodb.SQL({ user: 'crshunter' }),
                 summary_tbl = 'ums_roadtest0917_minuteaverages',
@@ -40,9 +49,76 @@
             var sql_summ = 'SELECT * FROM ' + summary_tbl,
                 sql_raw = 'SELECT * FROM ' + raw_tbl;
 
+            var LayerActions;
 
+            var sublayers = [],
+                binsRaw = [],
+                binsSumm = [],
+                summCSS,
+                rawCSS,
+                dataQuarters = {
+                    labels: [],
+                    temps: [],
+                    humid: []
+                };
+
+            // initialize parameters
             function init(){
-                // initiate leaflet map
+                console.log('starting init');
+                var qrySumm = "SELECT CDB_JenksBins(array_agg(round(amb_temp::numeric, 2)), 7) FROM " + summary_tbl;
+                var qryRaw = "SELECT CDB_JenksBins(array_agg(round(amb_temp::numeric, 2)), 7) FROM " + raw_tbl;
+
+                cbd_sql.execute(qrySumm).done(function(jenks){
+                    binsSumm = jenks.rows[0].cdb_jenksbins
+                    //console.log('jenks returned: ', jenks.rows[0].cdb_jenksbins[0], ' 2nd record is ', jenks.rows[0].cdb_jenksbins[1]);
+                    summCSS = makeCartoCSS(summary_tbl, binsSumm);
+                });
+
+                cbd_sql.execute(qryRaw).done(function(jenks){
+                    binsRaw = jenks.rows[0].cdb_jenksbins
+                    //console.log('jenks returned: ', jenks.rows[0].cdb_jenksbins[0], ' 2nd record is ', jenks.rows[0].cdb_jenksbins[1]);
+                    rawCSS = makeCartoCSS(raw_tbl, binsRaw);
+                });
+
+                var qryTemp = "SELECT round(avg(amb_temp)::numeric, 2) avg_temp, round(avg(amb_humid)::numeric, 2) avg_humid, ",
+                    qryTemp = qryTemp + "extract(hour from time_intmin)*100 + ceil(extract(minute from time_intmin)/15) as hour_quarter ",
+                    qryTemp = qryTemp + "FROM ums_roadtest0917_minuteaverages GROUP BY hour_quarter ORDER BY hour_quarter ASC";
+
+                //console.log('qryTemp is:', qryTemp);
+
+                cbd_sql.execute(qryTemp)
+                .done(function(data) {
+                    for (i in data.rows){
+                        dataQuarters.labels.push(data.rows[i].hour_quarter)
+                        dataQuarters.temps.push(data.rows[i].avg_temp)
+                        dataQuarters.humid.push(data.rows[i].avg_humid)
+                    }
+                    console.log(JSON.stringify(dataQuarters));
+
+                    main(); // only call main once data is returned
+                });
+
+                // set up layer switching
+                LayerActions = {
+                    summary: function(){
+                        sublayers[0].show()
+                        sublayers[1].hide()
+                        return true;
+                    },
+                    raw: function(){
+                        sublayers[1].show()
+                        sublayers[0].hide()
+                        console.log('raw layer interactivity', sublayers[1].get('interactivity'));
+                        return true;
+                    }
+                }
+
+                console.log('end of init');
+            }
+
+            // try splitting out init() vs main() functions to ensure data is fully loaded
+            function main(){
+                console.log('main called');
                 map = new L.Map('map', {
                     center: [42.3601, -71.0589],
                     zoom: 12
@@ -52,77 +128,82 @@
                     attribution: 'Mapbox <a href="http://mapbox.com/about/maps" target="_blank">Terms &amp; Feedback</a>'
                 }).addTo(map);
 
-                //var layerUrl = 'https://crshunter.cartodb.com/api/v2/viz/4e2642ce-7d07-11e5-abc8-0ecfd53eb7d3/viz.json';
-
-                var sublayers = [];
-
                 cartodb.createLayer(map, viz_url)
                 .addTo(map)
                 .on('done', function(layer){
-                    // change the query for the first layer
                     var subLayerOptions = {
-                        sql: "SELECT * FROM ne_10m_populated_places_simple",
-                        cartocss: "#ne_10m_populated_places_simple{marker-fill: #F84F40; marker-width: 8; marker-line-color: white; marker-line-width: 2; marker-clip: false; marker-allow-overlap: true;}"
-                    }
+                        sql: sql_summ,
+                        cartoss: summCSS,
+                    };
 
                     var sublayer = layer.getSubLayer(0);
-
                     sublayer.set(subLayerOptions);
-
+                    cdb.vis.Vis.addInfowindow(map, sublayer, ["amb_temp", "amb_lux"]);
                     sublayers.push(sublayer);
-                }).on('error', function(err) {
-                    //log the error
-                    console.log('error is ', err);
-                });
 
-                var LayerActions = {
-                    summary: function(){
-                        sublayers[0].setSQL(sql_summ);
-                        sublayers[0].setCartoCSS(makeCartoCSS(summary_tbl));
-                        //console.log('summary LayerActions returning...');
-                        return true;
-                    },
-                    raw: function(){
-                        sublayers[0].setSQL(sql_raw);
-                        sublayers[0].setCartoCSS(makeCartoCSS(raw_tbl));
-                        //console.log('raw LayerActions returning...');
-                        return true;
+                    var rawLayer = layer.createSubLayer({
+                        sql: sql_raw,
+                        cartocss: rawCSS,
+                    });//.hide();
+                    cdb.vis.Vis.addInfowindow(map, rawLayer, ["amb_temp", "amb_lux"]);
+                    sublayers.push(rawLayer);
+                    sublayers[1].hide();
+
+                    var lineChartData = {
+                        labels : dataQuarters.labels,
+                        datasets : [
+                            {
+                                label: "Average temperature",
+                                fillColor : "rgba(220,220,120,0.5)",
+                                strokeColor : "rgba(220,220,120,1)",
+                                pointColor : "rgba(220,220,120,1)",
+                                pointStrokeColor : "#fff",
+                                data : dataQuarters.temps
+                            },
+                            {
+                                label: "Average humidity",
+                                fillColor : "rgba(151,187,205,0.5)",
+                                strokeColor : "rgba(151,187,205,1)",
+                                pointColor : "rgba(151,187,205,1)",
+                                pointStrokeColor : "#fff",
+                                data : dataQuarters.humid
+                            }
+                        ]
+
                     }
-                }
+
+                    var myLine = new Chart(document.getElementById("temp-quarterly").getContext("2d")).Line(lineChartData);
+
+                });
 
                 $('.button').click(function() {
                     $('.button').removeClass('selected');
                     $(this).addClass('selected');
                     //this gets the id of the different buttons and calls to LayerActions which responds according to the selected id
                     LayerActions[$(this).attr('id')]();
+                }).on('error', function(err) {
+                    //log the error
+                    console.log('error is ', err);
                 });
             }
 
-            function makeCartoCSS(tbl_name){
-                // something like this line should be able to dynamically grab bins from client, but better from backend?
-                var qry = "SELECT CDB_JenksBins(array_agg(round(amb_temp::numeric, 2)), 7) FROM " + tbl_name;
-                //var bins =
-                cbd_sql.execute(qry).done(function(bins){
-                    console.log('bins returned: ', bins);
-                })
+            // create CartoCSS string, assumes "summary_tbl" is a polygon and "raw_tbl" is points
+            function makeCartoCSS(tbl_name, bins){
+                // update to dynamically call color pallete (eventually of user choice) of same length as "bins"
+                colorPallete = ['#F1EEF6', '#D4B9DA', '#C994C7', '#DF65B0', '#E7298A', '#CE1256', '#91003F']
+
                 if (tbl_name == summary_tbl) {
-                    var tmp_css = '#' + tbl_name + '{ polygon-fill: #F1EEF6; polygon-opacity: 0.8; line-color: #FFF; line-width: 0.5; line-opacity: 1;}',
-                        tmp_css = tmp_css + '#' + tbl_name + ' [ amb_temp <= 33.5] { polygon-fill: #91003F; }',
-                        tmp_css = tmp_css + '#' + tbl_name + ' [ amb_temp <= 32.03] { polygon-fill: #CE1256; }',
-                        tmp_css = tmp_css + '#' + tbl_name + ' [ amb_temp <= 31.07] { polygon-fill: #E7298A; }',
-                        tmp_css = tmp_css + '#' + tbl_name + ' [ amb_temp <= 30.25] { polygon-fill: #DF65B0; }',
-                        tmp_css = tmp_css + '#' + tbl_name + ' [ amb_temp <= 29.38] { polygon-fill: #C994C7; }',
-                        tmp_css = tmp_css + '#' + tbl_name + ' [ amb_temp <= 28.8] { polygon-fill: #D4B9DA; }',
-                        tmp_css = tmp_css + '#' + tbl_name + ' [ amb_temp <= 27.53] { polygon-fill: #F1EEF6; }';
+                    var tmp_css = '#' + tbl_name + '{ polygon-fill: #F1EEF6; polygon-opacity: 0.8; line-color: #FFF; line-width: 0.5; line-opacity: 1;}';
+                    for (var i = bins.length-1; i >= 0; i--) {
+                        // console.log('bin[', i, '] is ', bins[i])
+                        tmp_css = tmp_css + '#' + tbl_name + ' [ amb_temp <= ' + bins[i] + '] { polygon-fill: ' + colorPallete[i] + '; }';
+                    }
                 } else if (tbl_name == raw_tbl){
-                    var tmp_css = '#' + tbl_name + '{   marker-fill-opacity: 0.8; marker-line-color: #FFF; marker-line-width: 0.5; marker-line-opacity: 0.5; marker-width: 10; marker-fill: #FFFFB2; marker-allow-overlap: true;}',
-                        tmp_css = tmp_css + '#' + tbl_name + ' [ amb_temp <= 34.14] { marker-fill: #91003F; }',
-                        tmp_css = tmp_css + '#' + tbl_name + ' [ amb_temp <= 32.03] { marker-fill: #CE1256; }',
-                        tmp_css = tmp_css + '#' + tbl_name + ' [ amb_temp <= 31.07] { marker-fill: #E7298A; }',
-                        tmp_css = tmp_css + '#' + tbl_name + ' [ amb_temp <= 30.25] { marker-fill: #DF65B0; }',
-                        tmp_css = tmp_css + '#' + tbl_name + ' [ amb_temp <= 29.38] { marker-fill: #C994C7; }',
-                        tmp_css = tmp_css + '#' + tbl_name + ' [ amb_temp <= 28.8] { marker-fill: #D4B9DA; }',
-                        tmp_css = tmp_css + '#' + tbl_name + ' [ amb_temp <= 27.53] { marker-fill: #F1EEF6; }';
+                    var tmp_css = '#' + tbl_name + '{   marker-fill-opacity: 0.8; marker-line-color: #FFF; marker-line-width: 0.5; marker-line-opacity: 0.5; marker-width: 10; marker-fill: #FFFFB2; marker-allow-overlap: true;}';
+                    for (var i = bins.length-1; i >= 0; i--) {
+                        // console.log('bin[', i, '] is ', bins[i])
+                        tmp_css = tmp_css + '#' + tbl_name + ' [ amb_temp <= ' + bins[i] + '] { marker-fill: ' + colorPallete[i] + '; }';
+                    }
                 } else {
                     var tmp_css = '#null{ marker-fill-opacity: 0.9; marker-line-color: #FFF; marker-line-width: 1; ',
                         tmp_css = tmp_css + 'marker-line-opacity: 1; marker-placement: point; marker-type: ellipse; ',
@@ -130,7 +211,6 @@
                 }
                 return tmp_css;
             }
-
         </script>
     </head>
 
@@ -139,6 +219,9 @@
         <div id='menu'>
             <a href="#summary" id="summary" class="button summary">summary</a>
             <a href="#raw" id="raw" class="button raw">raw</a>
+        </div>
+        <div id='dashboard'>
+            <canvas id='temp-quarterly'></canvas>
         </div>
     </body>
 </html>
