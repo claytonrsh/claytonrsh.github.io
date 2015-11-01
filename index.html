@@ -18,11 +18,11 @@
 
             #dashboard { position: absolute; left:0px; top:0px; width: 30%; height:100%; background: white; }
 
-            #temperature-chart { position: absolute; left: 10px; top: 50px; width: 500px; height: 200px; z-index: 5; }
+            #temperature-chart { position: absolute; left: 10px; top: 50px; width: 80%; height: 200px; z-index: 5; }
 
             #humidity-chart { position: absolute; left: 10px; top: 300px; width: 500px; height: 200px; z-index: 5; }
 
-            #accelerometer-chart { position: absolute; left: 10px; top: 550px; width: 500px; height: 200px; z-index: 5; }
+            #accelerometer-chart { position: absolute; left: 10px; top: 550px; width: 80%; height: 200px; z-index: 5; }
 
             #menu { position: absolute; top: 5px; right: 10px; width: 400px; height:60px; background: transparent; z-index:10;}
             #menu a {
@@ -132,12 +132,12 @@
                     //qryTemp = qryTemp + "time_intmin ",
                     //qryTemp = qryTemp + "FROM ums_roadtest0917_minuteaverages GROUP BY time_intmin ORDER BY time_intmin ASC";
 
-                var qryTemp = "SELECT round((extract('hour' from gps_datetimestamp)*100 + extract('minute' from gps_datetimestamp)/60*100 + ",
-                    qryTemp = qryTemp + "extract('second' from gps_datetimestamp)/60)::numeric, 2) as time_var, ",
+                var qryTemp = "SELECT round((extract('hour' from gps_datetimestamp)*100 + extract('minute' from gps_datetimestamp)/60*100)::numeric, 2) as time_var, ", // + ",
+                    //qryTemp = qryTemp + "extract('second' from gps_datetimestamp)/60)::numeric, 2) as time_var, ",
                     qryTemp = qryTemp + 'round(avg(' + viz_var + ")::numeric, 2) amb_temp, round(avg(amb_humd)::numeric, 2) amb_humd ",
                     qryTemp = qryTemp + "FROM " + raw_tbl + " GROUP BY time_var ORDER BY time_var;"
 
-                console.log('qryTemp is:', qryTemp);
+                // console.log('qryTemp is:', qryTemp);
 
                 cdb_sql.execute(qryTemp)
                 .done(function(data) {
@@ -170,8 +170,8 @@
                     summary: function(){
                         sublayers[0].show()
                         sublayers[1].hide()
-                        console.log('summary layer interactivity', sublayers[0].get('interactivity'));
-                        console.log('summary layer interactivity', sublayers[0].get('cartoss'));
+                        //console.log('summary layer interactivity', sublayers[0].get('interactivity'));
+                        //console.log('summary layer cartocss', sublayers[0].get('cartoss'));
                         return true;
                     },
                     raw: function(){
@@ -190,7 +190,7 @@
             function main(){
                 console.log('main called');
                 map = new L.Map('map', {
-                    center: [42.3601, -71.0589],
+                    center: [42.3301, -71.0589],
                     zoom: 12
                 })
 
@@ -247,14 +247,14 @@
                 var tempLine = new Dygraph(document.getElementById('temperature-chart'), dataQuarters.data, {
                                             labels: dataQuarters.headers,
                                             title: "Temperature and humidity",
-                                            ylabel: "Values",
-                                            xlabel: "time of day (HHMM.seconds)"
+                                            ylabel: "Avg Values",
+                                            xlabel: "time of day (HHMM, minutes stretched to base 100)"
                 });
 
                 // test larger dataset read from local csv
                 var roadLine = new Dygraph(document.getElementById('accelerometer-chart'), dataRoads.data, {
                     labels: dataRoads.headers,
-                    title: "road quality testing",
+                    title: "road quality - testing data size",
                     ylabel: "rdq means",
                     xlabel: "time"
                 });
