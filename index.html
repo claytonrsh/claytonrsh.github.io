@@ -1,19 +1,23 @@
 <html>
     <head>
         <title>UMS: Dashboard Dev</title>
-        <script src="http://www.chartjs.org/assets/Chart.js"></script>
+        <!-- dygraph is nicely interactive and just works without many options to set -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/dygraph/1.1.1/dygraph-combined.js"></script>
 
         <link rel="stylesheet" href="http://libs.cartocdn.com/cartodb.js/v3/3.11/themes/css/cartodb.css" />
         <script type="infowindow/html" id="infowindow_template"></script>
         <script src="http://libs.cartocdn.com/cartodb.js/v3/3.11/cartodb.js"></script>
 
+        <!--script src="../secret.js"></script> <!-- in case want to access admin tables on CartoDB eg list all columns in table -->
+
         <style>
             html, body {width:100%; height:100%; padding: 0; margin: 0;}
             #map { position: absolute; right:0px; top:0px; width: 70%; height:100%; background: black; }
 
-            #dashboard { position: absolute; left:0px; top:0px; width: 30%; height:100%; background: black; }
+            #dashboard { position: absolute; left:0px; top:0px; width: 30%; height:100%; background: white; }
 
-            #temp-quarterly { position: absolute; left: 10px; top: 5px; width: 500px; height: 200px; z-index: 10; }
+            #temp-quarterly { position: absolute; left: 10px; top: 50px; width: 500px; height: 200px; z-index: 5; }
+
 
             #menu { position: absolute; top: 5px; right: 10px; width: 400px; height:60px; background: transparent; z-index:10;}
             #menu a {
@@ -41,10 +45,12 @@
         <script>
             // global variables
             var map;
-            var cbd_sql = new cartodb.SQL({ user: 'crshunter' }),
+            var cdb_sql = new cartodb.SQL({ user: 'crshunter' }),
+            //var cdb_sql = new cartodb.SQL({ user: secret.USER, api_key: secret.API_KEY }),
                 summary_tbl = 'ums_roadtest0917_minuteaverages',
                 raw_tbl = 'ums_roadtest_0917',
-                viz_url = 'https://crshunter.cartodb.com/api/v2/viz/4e2642ce-7d07-11e5-abc8-0ecfd53eb7d3/viz.json';
+                viz_url = 'https://crshunter.cartodb.com/api/v2/viz/4e2642ce-7d07-11e5-abc8-0ecfd53eb7d3/viz.json',
+                viz_var = 'amb_temp';
 
             var sql_summ = 'SELECT * FROM ' + summary_tbl,
                 sql_raw = 'SELECT * FROM ' + raw_tbl;
@@ -56,45 +62,58 @@
                 binsSumm = [],
                 summCSS,
                 rawCSS,
-                dataQuarters = {
-                    labels: [],
-                    temps: [],
-                    humid: []
-                };
+                dataQuarters = {headers: [], data: []}; // new format fory dygraph
+            //= { labels: [], temps: [], humid: [] }; // old format for chart.js
 
-            // initialize parameters
+            // initialize data parameters
             function init(){
                 console.log('starting init');
-                var qrySumm = "SELECT CDB_JenksBins(array_agg(round(amb_temp::numeric, 2)), 7) FROM " + summary_tbl;
-                var qryRaw = "SELECT CDB_JenksBins(array_agg(round(amb_temp::numeric, 2)), 7) FROM " + raw_tbl;
 
-                cbd_sql.execute(qrySumm).done(function(jenks){
+                // set bins with default values
+                var qrySumm = "SELECT CDB_JenksBins(array_agg(round(" + viz_var + "::numeric, 2)), 7) FROM " + summary_tbl;
+                var qryRaw = "SELECT CDB_JenksBins(array_agg(round(" + viz_var + "::numeric, 2)), 7) FROM " + raw_tbl;
+
+                // get table columns
+                /* works fine but needs API key, shouldn't have on public github site...
+                var qryCols = "SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '" + raw_tbl +"'";
+                console.log('qryCols is', qryCols);
+                var columns = { colName: [], dataType: [] };
+                cdb_sql.execute(qryCols).done(function(cols){
+                    for (i in cols.rows){
+                        columns.colName.push(cols.rows[i].column_name);
+                        columns.dataType.push(cols.rows[i].data_type);
+                    }
+                    // console.log('columns is', columns);
+                });
+                */
+                cdb_sql.execute(qrySumm).done(function(jenks){
                     binsSumm = jenks.rows[0].cdb_jenksbins
                     //console.log('jenks returned: ', jenks.rows[0].cdb_jenksbins[0], ' 2nd record is ', jenks.rows[0].cdb_jenksbins[1]);
-                    summCSS = makeCartoCSS(summary_tbl, binsSumm);
+                    summCSS = makeCartoCSS(summary_tbl, binsSumm, viz_var);
                 });
 
-                cbd_sql.execute(qryRaw).done(function(jenks){
+                cdb_sql.execute(qryRaw).done(function(jenks){
                     binsRaw = jenks.rows[0].cdb_jenksbins
                     //console.log('jenks returned: ', jenks.rows[0].cdb_jenksbins[0], ' 2nd record is ', jenks.rows[0].cdb_jenksbins[1]);
-                    rawCSS = makeCartoCSS(raw_tbl, binsRaw);
+                    rawCSS = makeCartoCSS(raw_tbl, binsRaw, viz_var);
                 });
 
                 var qryTemp = "SELECT round(avg(amb_temp)::numeric, 2) avg_temp, round(avg(amb_humid)::numeric, 2) avg_humid, ",
-                    qryTemp = qryTemp + "extract(hour from time_intmin)*100 + ceil(extract(minute from time_intmin)/15) as hour_quarter ",
-                    qryTemp = qryTemp + "FROM ums_roadtest0917_minuteaverages GROUP BY hour_quarter ORDER BY hour_quarter ASC";
+                    //qryTemp = qryTemp + "extract(hour from time_intmin)*100 + ceil(extract(minute from time_intmin)/60*100) as hour_quarter ",
+                    qryTemp = qryTemp + "time_intmin ",
+                    qryTemp = qryTemp + "FROM ums_roadtest0917_minuteaverages GROUP BY time_intmin ORDER BY time_intmin ASC";
 
-                //console.log('qryTemp is:', qryTemp);
+                console.log('qryTemp is:', qryTemp);
 
-                cbd_sql.execute(qryTemp)
+                cdb_sql.execute(qryTemp)
                 .done(function(data) {
+                    // look at data, how access returned column names?
+                    console.log('quarter hour data.fields keys are:', Object.keys(data.fields));
+                    dataQuarters.headers = ['time', 'avg_temp', 'avg_humid'];
                     for (i in data.rows){
-                        dataQuarters.labels.push(data.rows[i].hour_quarter)
-                        dataQuarters.temps.push(data.rows[i].avg_temp)
-                        dataQuarters.humid.push(data.rows[i].avg_humid)
+                        dataQuarters.data.push([new Date(data.rows[i].time_intmin), data.rows[i].avg_temp, data.rows[i].avg_humid]);
                     }
-                    console.log(JSON.stringify(dataQuarters));
-
+                    // console.log(JSON.stringify(dataQuarters));
                     main(); // only call main once data is returned
                 });
 
@@ -103,12 +122,14 @@
                     summary: function(){
                         sublayers[0].show()
                         sublayers[1].hide()
+                        //console.log('summary layer interactivity', sublayers[0].get('interactivity'));
                         return true;
                     },
                     raw: function(){
                         sublayers[1].show()
                         sublayers[0].hide()
-                        console.log('raw layer interactivity', sublayers[1].get('interactivity'));
+                        //console.log('raw layer interactivity', sublayers[1].get('interactivity'));
+                        //console.log('raw layer css', sublayers[1].get('cartocss'));
                         return true;
                     }
                 }
@@ -149,30 +170,24 @@
                     sublayers.push(rawLayer);
                     sublayers[1].hide();
 
-                    var lineChartData = {
-                        labels : dataQuarters.labels,
-                        datasets : [
-                            {
-                                label: "Average temperature",
-                                fillColor : "rgba(220,220,120,0.5)",
-                                strokeColor : "rgba(220,220,120,1)",
-                                pointColor : "rgba(220,220,120,1)",
-                                pointStrokeColor : "#fff",
-                                data : dataQuarters.temps
-                            },
-                            {
-                                label: "Average humidity",
-                                fillColor : "rgba(151,187,205,0.5)",
-                                strokeColor : "rgba(151,187,205,1)",
-                                pointColor : "rgba(151,187,205,1)",
-                                pointStrokeColor : "#fff",
-                                data : dataQuarters.humid
-                            }
-                        ]
+                    // test out dygraph for visualization - some how interfering with layer toggle funcitonality? doesn't seem so...
+                    var gLine = new Dygraph(document.getElementById('temp-quarterly'), dataQuarters.data,
+                                            {
+                                                labels: dataQuarters.headers,
+                                                title: "Averages by minute",
+                                                ylabel: "averge values",
+                                                xlabel: "time (minute intervals)"
+                                            });
 
-                    }
+                    // does it work to wrap listener inside other listener like this?
+                    sublayers[0].on('featureClick', function(e, latlng, pos, data, subLayerIndex){
+                        console.log('summary layer clicked, e is', e, '\nlatlng is', latlng, '\npos is', pos, '\ndata is', data, '\subLayerIndex is', subLayerIndex);
+                    });
 
-                    var myLine = new Chart(document.getElementById("temp-quarterly").getContext("2d")).Line(lineChartData);
+                    sublayers[1].on('featureClick', function(e, latlng, pos, data, subLayerIndex){
+                        console.log('raw layer clicked, e is', e, '\nlatlng is', latlng, '\npos is', pos, '\ndata is', data, '\subLayerIndex is', subLayerIndex);
+                    });
+
 
                 });
 
@@ -188,7 +203,7 @@
             }
 
             // create CartoCSS string, assumes "summary_tbl" is a polygon and "raw_tbl" is points
-            function makeCartoCSS(tbl_name, bins){
+            function makeCartoCSS(tbl_name, bins, col){
                 // update to dynamically call color pallete (eventually of user choice) of same length as "bins"
                 colorPallete = ['#F1EEF6', '#D4B9DA', '#C994C7', '#DF65B0', '#E7298A', '#CE1256', '#91003F']
 
@@ -196,13 +211,13 @@
                     var tmp_css = '#' + tbl_name + '{ polygon-fill: #F1EEF6; polygon-opacity: 0.8; line-color: #FFF; line-width: 0.5; line-opacity: 1;}';
                     for (var i = bins.length-1; i >= 0; i--) {
                         // console.log('bin[', i, '] is ', bins[i])
-                        tmp_css = tmp_css + '#' + tbl_name + ' [ amb_temp <= ' + bins[i] + '] { polygon-fill: ' + colorPallete[i] + '; }';
+                        tmp_css = tmp_css + '#' + tbl_name + ' [ '+ col + ' <= ' + bins[i] + '] { polygon-fill: ' + colorPallete[i] + '; }';
                     }
                 } else if (tbl_name == raw_tbl){
                     var tmp_css = '#' + tbl_name + '{   marker-fill-opacity: 0.8; marker-line-color: #FFF; marker-line-width: 0.5; marker-line-opacity: 0.5; marker-width: 10; marker-fill: #FFFFB2; marker-allow-overlap: true;}';
                     for (var i = bins.length-1; i >= 0; i--) {
                         // console.log('bin[', i, '] is ', bins[i])
-                        tmp_css = tmp_css + '#' + tbl_name + ' [ amb_temp <= ' + bins[i] + '] { marker-fill: ' + colorPallete[i] + '; }';
+                        tmp_css = tmp_css + '#' + tbl_name + ' [ ' + col + ' <= ' + bins[i] + '] { marker-fill: ' + colorPallete[i] + '; }';
                     }
                 } else {
                     var tmp_css = '#null{ marker-fill-opacity: 0.9; marker-line-color: #FFF; marker-line-width: 1; ',
@@ -221,7 +236,7 @@
             <a href="#raw" id="raw" class="button raw">raw</a>
         </div>
         <div id='dashboard'>
-            <canvas id='temp-quarterly'></canvas>
+            <div id='temp-quarterly'></div>
         </div>
     </body>
 </html>
