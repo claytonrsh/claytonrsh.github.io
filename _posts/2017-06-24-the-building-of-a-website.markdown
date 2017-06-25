@@ -4,7 +4,7 @@ title:      "The building of a website"
 subtitle:   "Only a month from beginning to here... not bad."
 date:       2017-06-24 22:00:00
 author:     "Clayton"
-header-img: "img/post1-bg.jpg"
+header-img: "img/First/post1-bg.jpg"
 ---
 <h2 class="section-heading">Building this site</h2>
 
@@ -22,4 +22,4 @@ After watching a co-worker build a (yet-to-be-if-ever-released website) I learne
 
 <h3 class="section-heading"> Oh, also...</h3>
 <p>If you were curious, dinner one of those nights in Middletown looked like this.</p>
-<image src="{{ site.baseurl }}/img/post1-finale.jpg" alt="Ginger-apple-OJ glazed pork tenderloin">
+<image src="{{ site.baseurl }}/img/First/post1-finale.jpg" alt="Ginger-apple-OJ glazed pork tenderloin">
