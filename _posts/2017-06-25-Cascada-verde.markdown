@@ -8,7 +8,7 @@ header-img: "img/post10/IMG_5503.2015-01-05_185753.jpg"
 ---
 {% assign post_data = site.data.post10 %}
 
-<i>Another post on blogger, but this time after my mom visited my in Costa Rica.<i/>
+<i>Another post on blogger, but this time after my mom visited me in Costa Rica.<i/>
 
 <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
 {% for entry in post_data %}
