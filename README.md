@@ -1,5 +1,5 @@
 # Website
-
+Also a way for me to test and learn various Git, GitHub, and web related things.
 
 
 ### attribution
