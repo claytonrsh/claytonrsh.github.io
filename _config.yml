@@ -3,13 +3,13 @@ title: Clayton
 header-img: img/home-bg.jpg
 email: crs.hunter@gmail.com
 copyright_name: Clayton's webpage
-description: "Write your site description here. It will be used as your sites meta description as well!"
+description: "Clayton's personal webpage."
 baseurl: ""
-url: "http://claytonrsh.github.io"
+url: "https://claytonrsh.com"
 twitter_username: claytonrsh
 github_username:  claytonrsh
 facebook_username:  claytonrsh
-email_username: 
+email_username:
 
 # Google Analytics
 # To enable google analytics, uncomment below line with a valid Google Tracking ID
