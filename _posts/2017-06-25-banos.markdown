@@ -1,0 +1,18 @@
+---
+layout:     post
+title:      "Baños"
+subtitle:   "Nearly nine years later..."
+date:       2017-06-25 07:30:00
+author:     "Clayton"
+header-img: "img/post5/IMG_0482.JPG"
+---
+<i>Fourth post on blogger when I studied abroad in Ecuador. Baños was pretty. Also, if memory serves, the bus ride to Baños was the first time someone tried to rob me in Ecuador. Sitting next to Jackie, the bus driver kept pointing to us and talking to the helper guy (who makes sure everyone paid for the bus) who would then turn to look at us, shrug, and face forward. We were confused. Then, we stopped for a break and the driver asked me - on the way to the restrooms - "So, did he take anything?", to which I demonstrated my whit by responding: "huh?". He clarified, "You know, the thief who was cutting into your bags...". The answer was no, they did not get anything, but they <b>did</b> get a nice look at Jackie's pink razors.<i/>
+
+<div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+{% for entry in site.data.post5 %}
+  {% if entry.entry > 0 %}
+  <image src="{{ site.baseurl }}/img/{{ entry.picture }}">
+  <figcaption>{{entry.caption}}</figcaption>
+  <br>
+  {% endif %}
+{% endfor %}
