@@ -1,0 +1,32 @@
+{% assign timeline_data = site.data[{{page.data-file}}] %}
+
+<div class="text-center">
+  <h2>{{ page.tl-header }}</h2>
+  <ul class="timeline">
+
+    {% for post in timeline_data %}
+      {% assign loopindex = forloop.index | modulo: 2 %}
+      {% capture class %}
+        {% if loopindex == 0 %}
+          timeline-inverted
+        {% endif %}
+      {% endcapture %}
+
+    <li class="{{ class }}">
+      <div class="timeline-image">
+          <img class="img-circle img-responsive" src="{{ site.baseurl }}/{% if post.image %}{{ post.image }}{% else %}{{site.career-img}}{% endif %}" alt="">
+      </div>
+      <div class="timeline-panel">
+          <div class="timeline-heading">
+              <h4>{{ post.title }}</h4>
+              <h4 class="subheading">{{ post.subtitle }}</h4>
+          </div>
+          <div class="timeline-body">
+              <p class="text-muted">{{ post.content | markdownify }}</p>
+          </div>
+      </div>
+    </li>
+
+    {% endfor %}
+  </ul>
+</div>
