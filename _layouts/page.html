@@ -9,8 +9,14 @@ layout: default
             <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
                 <div class="site-heading">
                     <h1>{% if page.title %}{{ page.title }}{% else %}{{ site.title }}{% endif %}</h1>
+
+                    {% if page.subtitle %}
+                    <h3 class="subheading">{{ page.subtitle }}</h3>
+                    {% endif %}
                     <hr class="small">
+                    {% if page.description %}
                     <span class="subheading">{{ page.description }}</span>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -27,3 +33,16 @@ layout: default
 </div>
 
 <hr>
+<hr>
+<ul class="pager">
+    {% if page.previous.url %}
+    <li class="previous">
+        <a href="{{ page.previous.url | prepend: site.baseurl | replace: '//', '/' }}" data-toggle="tooltip" data-placement="top" title="{{page.previous.title}}">&larr; Previous Post</a>
+    </li>
+    {% endif %}
+    {% if page.next.url %}
+    <li class="next">
+        <a href="{{ page.next.url | prepend: site.baseurl | replace: '//', '/' }}" data-toggle="tooltip" data-placement="top" title="{{page.next.title}}">Next Post &rarr;</a>
+    </li>
+    {% endif %}
+</ul>
