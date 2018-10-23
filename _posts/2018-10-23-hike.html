@@ -1,0 +1,91 @@
+---
+layout:     post
+title:      "The Hike"
+subtitle:   "When Costa Ricans plan an adventure"
+date:       2018-10-23 00:15:00
+author:     "Clayton"
+header-img: "img/hike/hike-bg.JPG"
+---
+<p>At the time this was brutal, but it is also one of my favorite stories to tell - which I guess is kinda how it goes... </p>
+
+<link rel="stylesheet" href="https://cdn.knightlab.com/libs/storymapjs/latest/css/storymap.css">
+<script type="text/javascript" src="https://cdn.knightlab.com/libs/storymapjs/latest/js/storymap-min.js"></script>
+
+<div id="mapdiv" style="width: 100%; height: 800px;"></div>
+
+<script>
+// storymap_data can be an URL or a Javascript object
+var storymap_data = {
+    width: 20,                // required for embed tool; width of StoryMap
+    height: 20,               // required for embed tool; height of StoryMap
+  //  font_css: string,              // optional; font set
+    calculate_zoom: true,              // optional; defaults to true.
+    storymap: {
+        language: 'en',          // required; two-letter ISO language code
+        map_type: 'http://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}.png',          // required
+        map_as_image: false,       // required
+       map_subdomains: 'abc',    // optional
+        slides: [{
+          type: "overview",      // optional; if present must be set to "overview"
+          text: {                // optional if media present
+              headline: 'We walked the whole way.',
+              text: 'Only about twice as long as advertised...'       // may contain HTML markup
+          },
+          media: {               // optional if text present
+              url: '{{site.baseurl}}/img/hike/hike-cover.JPG',       // url for featured media
+              caption: 'The route',   // optional; brief explanation of media content
+          }
+      }, {
+        location: {            // required for all slides except "overview" slide
+            lat: 10.216025,      // latitude of point on map
+            lon: -84.854220       // longitude of point on map
+        },
+        text: {                // optional if media present
+            headline: 'Bright eyed and bushy tailed',
+            text: "Gearing up for a leisurely stroll of 20km, or was that 20 <i>miles</i>? Meh, it'll be fine"       // may contain HTML markup
+        },
+        media: {               // optional if text present
+            url: '{{site.baseurl}}/img/hike/got-the-gear.JPG',       // url for featured media
+            caption: "goin' strong",   // optional; brief explanation of media content
+//            credit: 'Clayton'     // optional; creator of media content
+        }
+      }, {
+        location: {            // required for all slides except "overview" slide
+            lat: 10.233510,      // latitude of point on map
+            lon: -84.852074       // longitude of point on map
+        },
+        text: {                // optional if media present
+            headline: 'Great scenery',
+            text: "It is a very pretty country"       // may contain HTML markup
+        },
+        media: {               // optional if text present
+            url: '{{site.baseurl}}/img/hike/the-views.JPG',       // url for featured media
+            caption: "I wish I'd taken more pictures",   // optional; brief explanation of media content
+  //            credit: 'Clayton'     // optional; creator of media content
+        }
+      }, {
+        location: {            // required for all slides except "overview" slide
+            lat: 10.343740,      // latitude of point on map
+            lon: -84.854282       // longitude of point on map
+        },
+        text: {                // optional if media present
+            headline: '~2 hours in to day two',
+            text: "Feeling good about the flat road"       // may contain HTML markup
+        },
+        media: {               // optional if text present
+            url: '{{site.baseurl}}/img/hike/cruising-day-2.JPG',       // url for featured media
+            caption: "I wish I'd taken more pictures",   // optional; brief explanation of media content
+  //            credit: 'Clayton'     // optional; creator of media content
+        }
+      }]
+    }
+};
+
+// certain settings must be passed within a separate options object
+var storymap_options = {};
+
+var storymap = new VCO.StoryMap('mapdiv', storymap_data, storymap_options);
+window.onresize = function(event) {
+    storymap.updateDisplay(); // this isn't automatic
+}
+</script>
